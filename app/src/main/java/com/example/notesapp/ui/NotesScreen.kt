@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,6 +20,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.notesapp.NotesViewModel
+import com.example.notesapp.data.NoteEntity
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -26,6 +28,7 @@ import java.util.*
 @Composable
 fun NotesScreen(viewModel: NotesViewModel) {
     var showDialog by remember { mutableStateOf(false) }
+    val notes by viewModel.allNotes.collectAsState(initial = emptyList())
 
     Scaffold(
         topBar = {
@@ -63,10 +66,10 @@ fun NotesScreen(viewModel: NotesViewModel) {
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            if (viewModel.notes.isEmpty()) {
+            if (notes.isEmpty()) {
                 EmptyState()
             } else {
-                NotesGrid(viewModel = viewModel)
+                NotesGrid(notes = notes, onDelete = { viewModel.deleteNote(it) })
             }
         }
     }
@@ -84,7 +87,7 @@ fun NotesScreen(viewModel: NotesViewModel) {
 }
 
 @Composable
-fun NotesGrid(viewModel: NotesViewModel) {
+fun NotesGrid(notes: List<NoteEntity>, onDelete: (NoteEntity) -> Unit) {
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Fixed(2),
         modifier = Modifier.fillMaxSize(),
@@ -92,46 +95,61 @@ fun NotesGrid(viewModel: NotesViewModel) {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalItemSpacing = 12.dp
     ) {
-        items(viewModel.notes) { note ->
+        items(notes) { note ->
             NoteCard(
-                title = note.title,
-                content = note.content,
-                timestamp = note.timestamp,
-                colorInt = note.color
+                note = note,
+                onDelete = { onDelete(note) }
             )
         }
     }
 }
 
 @Composable
-fun NoteCard(title: String, content: String, timestamp: Long, colorInt: Int) {
-    val dateString = remember(timestamp) {
+fun NoteCard(note: NoteEntity, onDelete: () -> Unit) {
+    val dateString = remember(note.timestamp) {
         val sdf = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-        sdf.format(Date(timestamp))
+        sdf.format(Date(note.timestamp))
     }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(colorInt)
+            containerColor = Color(note.color)
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black.copy(alpha = 0.8f)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = note.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black.copy(alpha = 0.8f),
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete",
+                        tint = Color.Black.copy(alpha = 0.5f)
+                    )
+                }
+            }
             
             Spacer(modifier = Modifier.height(8.dp))
             
             Text(
-                text = content,
+                text = note.content,
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.Black.copy(alpha = 0.7f),
                 maxLines = 10

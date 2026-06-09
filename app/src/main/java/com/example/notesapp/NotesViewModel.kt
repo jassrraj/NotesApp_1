@@ -1,12 +1,16 @@
 package com.example.notesapp
 
-import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import com.example.notesapp.data.NoteEntity
+import com.example.notesapp.data.NoteRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 
-class NotesViewModel : ViewModel() {
+class NotesViewModel(private val repository: NoteRepository) : ViewModel() {
 
-    private val _notes = mutableStateListOf<Note>()
-    val notes: List<Note> get() = _notes
+    val allNotes: Flow<List<NoteEntity>> = repository.allNotes
 
     // Predefined pastel colors for notes
     val noteColors = listOf(
@@ -21,7 +25,31 @@ class NotesViewModel : ViewModel() {
 
     fun addNote(title: String, content: String, color: Int) {
         if (title.isNotBlank()) {
-            _notes.add(0, Note(title, content, color = color))
+            viewModelScope.launch {
+                val newNote = NoteEntity(
+                    title = title,
+                    content = content,
+                    timestamp = System.currentTimeMillis(),
+                    color = color
+                )
+                repository.insert(newNote)
+            }
         }
+    }
+
+    fun deleteNote(note: NoteEntity) {
+        viewModelScope.launch {
+            repository.delete(note)
+        }
+    }
+}
+
+class NotesViewModelFactory(private val repository: NoteRepository) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(NotesViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return NotesViewModel(repository) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }

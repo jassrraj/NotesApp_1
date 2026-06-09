@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import com.example.notesapp.data.NoteDatabase
+import com.example.notesapp.data.NoteRepository
 import com.example.notesapp.ui.NotesScreen
 
 /**
@@ -15,15 +17,20 @@ import com.example.notesapp.ui.NotesScreen
  */
 class MainActivity : ComponentActivity() {
 
-    // Initialize the ViewModel using the viewModels delegate
-    private val viewModel: NotesViewModel by viewModels()
+    // Initialize the Database and Repository
+    private val database by lazy { NoteDatabase.getDatabase(this) }
+    private val repository by lazy { NoteRepository(database.noteDao()) }
+
+    // Initialize the ViewModel using the factory
+    private val viewModel: NotesViewModel by viewModels {
+        NotesViewModelFactory(repository)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
             MaterialTheme {
-                // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
